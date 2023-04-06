@@ -112,6 +112,7 @@ class AlbumHandler(FileSystemEventHandler):
                     with open(filename, "wb") as f:
                         f.write(response.content)
                     log.info(f"Downloaded {filename}")
+                    self.repair_exif(filename)
                     self.update_exif(filename)
                     self.resize_image(filename, 1920)
 
@@ -155,6 +156,20 @@ class AlbumHandler(FileSystemEventHandler):
                     )
                 else:
                     log.warn(f"Could not find any date information for {filename}.")
+
+    # Repair exif data
+    def repair_exif(self, filename: str) -> None:
+        with exiftool.ExifTool() as et:
+            et.execute(
+                        "-overwrite_original",
+                        "-all=",
+                        "-tagsfromfile",
+                        "@",
+                        "-all:all",
+                        "-unsafe",
+                        "-icc_profile",
+                        filename,
+                    )
 
     # Check file for exif date and update if necessary
     # pillow seems to not support datetimeoriginal
