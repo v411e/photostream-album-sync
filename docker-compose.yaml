@@ -1,0 +1,17 @@
+version: "3.7"
+services:
+  app:
+    image: valentinriess/photoprism-album-sync:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ./cache:/app/cache
+      - ./data:/app/data
+    env_file: .env
+    environment:
+      - PPSYNC_BASE_URL=${PPSYNC_BASE_URL}
+      - PPSYNC_ALBUM_PATH=${PPSYNC_ALBUM_PATH}
+      - PPSYNC_CACHE_PATH=${PPSYNC_CACHE_PATH}
+      - PPSYNC_USERNAME=${PPSYNC_USERNAME}
+      - PPSYNC_PASSWORD=${PPSYNC_PASSWORD}

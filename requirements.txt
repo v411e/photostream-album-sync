@@ -1,0 +1,5 @@
+watchdog==3.0.0
+PyYAML==6.0
+requests==2.28.2
+Pillow==9.5.0
+PyExifTool==0.5.5
