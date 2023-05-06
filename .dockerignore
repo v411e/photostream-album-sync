@@ -2,4 +2,4 @@
 cache
 venv
 data
-.env_prod
+.env_dev

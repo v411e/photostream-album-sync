@@ -112,8 +112,8 @@ class AlbumHandler(FileSystemEventHandler):
                     with open(filename, "wb") as f:
                         f.write(response.content)
                     log.info(f"Downloaded {filename}")
-                    self.repair_exif(filename)
-                    self.update_exif(filename)
+                    filename = self.repair_exif(filename)
+                    filename = self.update_exif(filename)
                     self.resize_image(filename, 1920)
 
                 # Remove deleted photos
@@ -132,18 +132,33 @@ class AlbumHandler(FileSystemEventHandler):
         except Exception as e:
             log.error(e)
 
-    def iso_to_yyyymmddhhmmss(self, iso_string: str):
+    @staticmethod
+    def iso_to_yyyymmddhhmmss(iso_string: str):
         # date_time_obj = datetime.datetime.fromisoformat(iso_string)
         date_time_obj = datetime.datetime.strptime(iso_string, "%Y-%m-%dT%H:%M:%SZ")
         return date_time_obj.strftime("%Y:%m:%d %H:%M:%S")
+    
+    @staticmethod
+    def convert_to_jpg_discard_exif(filename: str) -> str:
+        if os.path.splitext(filename)[1].lower() != ".jpg":
+            log.info(f"Converting {filename} to jpg.")
+            new_filename = os.path.splitext(filename)[0] + ".jpg"
+            with Image.open(filename) as im:
+                im = im.convert("RGB")
+                im.save(new_filename)
+            os.remove(filename)
+            return new_filename
+        else:
+            return filename
 
     # Check file for exif date and update if necessary
-    def update_exif(self, filename: str) -> None:
+    def update_exif(self, filename: str) -> str:
         uid = os.path.splitext(os.path.basename(filename))[0]
         with exiftool.ExifToolHelper() as et:
             metadata = et.get_metadata(filename)[0]
             if not metadata.get("EXIF:DateTimeOriginal"):
                 log.info(f"No exif date found for {filename}.")
+                filename = self.convert_to_jpg_discard_exif(filename)
                 photo_data = self.get_photo_data(uid)
                 if photo_data.get("TakenAt"):
                     log.info(f"Updating exif date for {filename}.")
@@ -154,11 +169,14 @@ class AlbumHandler(FileSystemEventHandler):
                         + self.iso_to_yyyymmddhhmmss(photo_data.get("TakenAt", "")),
                         filename,
                     )
+                    return filename
                 else:
                     log.warn(f"Could not find any date information for {filename}.")
+                    os.remove(filename)
+        return filename
 
     # Repair exif data
-    def repair_exif(self, filename: str) -> None:
+    def repair_exif(self, filename: str) -> str:
         with exiftool.ExifTool() as et:
             et.execute(
                         "-overwrite_original",
@@ -170,6 +188,7 @@ class AlbumHandler(FileSystemEventHandler):
                         "-icc_profile",
                         filename,
                     )
+        return filename
 
     # Check file for exif date and update if necessary
     # pillow seems to not support datetimeoriginal
