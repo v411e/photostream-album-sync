@@ -1,11 +1,6 @@
-import datetime
-import logging
-import os
-import yaml
-import requests
-import time
-from PIL import Image
-import exiftool
+import logging, os, yaml, time
+from photoprism_api import PhotoprismApi
+import image_utils
 
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
@@ -25,51 +20,7 @@ class AlbumHandler(FileSystemEventHandler):
         self.cache_path = cache_path
         self.username = username
         self.password = password
-
-        self.session_id = self.get_session_id()
-        self.download_token = self.get_download_token()
-
-    # Get session ID from API
-    def get_session_id(self) -> str:
-        auth_url = f"{self.base_url}/api/v1/session"
-        response = requests.post(
-            auth_url, json={"username": self.username, "password": self.password}
-        )
-        json_response = response.json()
-        session_id = json_response.get("id")
-        log.info("Got session ID.")
-        return session_id
-
-    # Get download token from API
-    def get_download_token(self) -> str:
-        config_url = f"{self.base_url}/api/v1/config"
-        response = requests.get(config_url, headers={"X-Session-ID": self.session_id})
-        json_response = response.json()
-        return json_response.get("downloadToken")
-
-    # Get photo data from API
-    def get_photo_data(self, uid: str) -> dict:
-        photo_url = f"{self.base_url}/api/v1/photos/{uid}"
-        headers = {"X-Session-ID": self.session_id}
-        response = requests.get(photo_url, headers=headers)
-        json_response = response.json()
-        return json_response
-
-    # Resize image with PIL to fit inside max_size
-    def resize_image(self, filename: str, max_size: int) -> None:
-        im = Image.open(filename)
-        exif = im.info["exif"]
-        width, height = im.size
-        if width > max_size or height > max_size:
-            if width > height:
-                new_width = max_size
-                new_height = int(max_size * height / width)
-            else:
-                new_height = max_size
-                new_width = int(max_size * width / height)
-            log.info(f"Resizing {filename} to {new_width}x{new_height}")
-            im = im.resize((new_width, new_height), Image.LANCZOS)
-            im.save(filename, exif=exif)
+        self.pp_api = PhotoprismApi(self.username, self.password, self.base_url)
 
     def on_modified(self, event) -> None:
         log.debug(f"File {event.src_path} modified.")
@@ -97,24 +48,15 @@ class AlbumHandler(FileSystemEventHandler):
                 # Download new photos
                 new_photos = current_photos - photo_set
                 for uid in new_photos:
-                    photo_url = f"{self.base_url}/api/v1/photos/{uid}/dl?t={self.download_token}"
-                    headers = {"X-Session-ID": self.session_id}
-                    response = requests.get(photo_url, headers=headers)
-                    original_filename = (
-                        response.headers["Content-Disposition"]
-                        .split("=")[-1]
-                        .strip('"')
-                    )
-                    filename = os.path.join(
-                        cache_path, f"{uid}{os.path.splitext(original_filename)[1]}"
-                    )
-                    os.makedirs(os.path.dirname(filename), exist_ok=True)
-                    with open(filename, "wb") as f:
-                        f.write(response.content)
-                    log.info(f"Downloaded {filename}")
-                    filename = self.repair_exif(filename)
-                    filename = self.update_exif(filename)
-                    self.resize_image(filename, 1920)
+                    filename = self.pp_api.download_photo(uid=uid, cache_path=self.cache_path)
+                    filename = image_utils.repair_exif(filename)
+
+                    # Fetch taken_at from server and update exif if necessary
+                    photo_data = self.pp_api.get_photo_data(uid)
+                    taken_at_from_server = photo_data.get("TakenAt", "")
+                    filename = image_utils.update_exif(filename, taken_at_from_server)
+
+                    image_utils.resize_image(filename, 1920)
 
                 # Remove deleted photos
                 deleted_photos = photo_set - current_photos
@@ -131,84 +73,6 @@ class AlbumHandler(FileSystemEventHandler):
 
         except Exception as e:
             log.error(e)
-
-    @staticmethod
-    def iso_to_yyyymmddhhmmss(iso_string: str):
-        # date_time_obj = datetime.datetime.fromisoformat(iso_string)
-        date_time_obj = datetime.datetime.strptime(iso_string, "%Y-%m-%dT%H:%M:%SZ")
-        return date_time_obj.strftime("%Y:%m:%d %H:%M:%S")
-    
-    @staticmethod
-    def convert_to_jpg_discard_exif(filename: str) -> str:
-        if os.path.splitext(filename)[1].lower() != ".jpg":
-            log.info(f"Converting {filename} to jpg.")
-            new_filename = os.path.splitext(filename)[0] + ".jpg"
-            with Image.open(filename) as im:
-                im = im.convert("RGB")
-                im.save(new_filename)
-            os.remove(filename)
-            return new_filename
-        else:
-            return filename
-
-    # Check file for exif date and update if necessary
-    def update_exif(self, filename: str) -> str:
-        uid = os.path.splitext(os.path.basename(filename))[0]
-        with exiftool.ExifToolHelper() as et:
-            metadata = et.get_metadata(filename)[0]
-            if not metadata.get("EXIF:DateTimeOriginal"):
-                log.info(f"No exif date found for {filename}.")
-                filename = self.convert_to_jpg_discard_exif(filename)
-                photo_data = self.get_photo_data(uid)
-                if photo_data.get("TakenAt"):
-                    log.info(f"Updating exif date for {filename}.")
-                    et.execute(
-                        "-overwrite_original",
-                        "-P",
-                        "-AllDates="
-                        + self.iso_to_yyyymmddhhmmss(photo_data.get("TakenAt", "")),
-                        filename,
-                    )
-                    return filename
-                else:
-                    log.warn(f"Could not find any date information for {filename}.")
-                    os.remove(filename)
-        return filename
-
-    # Repair exif data
-    def repair_exif(self, filename: str) -> str:
-        with exiftool.ExifTool() as et:
-            et.execute(
-                        "-overwrite_original",
-                        "-all=",
-                        "-tagsfromfile",
-                        "@",
-                        "-all:all",
-                        "-unsafe",
-                        "-icc_profile",
-                        filename,
-                    )
-        return filename
-
-    # Check file for exif date and update if necessary
-    # pillow seems to not support datetimeoriginal
-    def update_exif_pillow(self, filename: str) -> None:
-        uid = os.path.splitext(os.path.basename(filename))[0]
-        im = Image.open(filename)
-        exif = im.getexif()
-        log.info(exif)
-        if not exif.get(306):
-            log.info(f"No exif date found for {filename}.")
-            photo_data = self.get_photo_data(uid)
-            if photo_data.get("TakenAt"):
-                log.info(f"Updating exif date for {filename}.")
-                exif[306] = exif[36867] = self.iso_to_yyyymmddhhmmss(
-                    photo_data.get("TakenAt", "")
-                )
-                im.save(filename, exif=exif)
-            else:
-                log.warn(f"Could not find any date information for {filename}.")
-        log.info(exif.get(306))
 
 
 if __name__ == "__main__":
