@@ -6,12 +6,13 @@ services:
       context: .
       dockerfile: Dockerfile
     volumes:
-      - ./cache:/app/cache
-      - ./data:/app/data
+      - ./cache:/app/cache # This is the place where the pictures will be downloaded to
+      - ./data:/app/data # Mount photoprism album yaml file here
     env_file: .env
     environment:
-      - PPSYNC_BASE_URL=${PPSYNC_BASE_URL}
-      - PPSYNC_ALBUM_PATH=${PPSYNC_ALBUM_PATH}
-      - PPSYNC_CACHE_PATH=${PPSYNC_CACHE_PATH}
-      - PPSYNC_USERNAME=${PPSYNC_USERNAME}
-      - PPSYNC_PASSWORD=${PPSYNC_PASSWORD}
+      - SYNC_BASE_URL=${SYNC_BASE_URL}
+      - PHOTOPRISM_SYNC_ALBUM_PATH=${PHOTOPRISM_SYNC_ALBUM_PATH}
+      - SYNC_CACHE_PATH=${SYNC_CACHE_PATH}
+      - SYNC_USERNAME=${SYNC_USERNAME}
+      - SYNC_PASSWORD=${SYNC_PASSWORD}
+      - SYNC_TYPE=${SYNC_TYPE}
