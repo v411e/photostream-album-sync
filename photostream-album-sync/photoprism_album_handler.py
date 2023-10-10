@@ -14,7 +14,7 @@ class AlbumHandler(FileSystemEventHandler):
         log.debug(f"File {event.src_path} modified.")
         log.debug(f"Event type: {event.event_type}")
         try:
-            album_file_has_changed = not event.is_directory and event.src_path == self.album_path;
+            album_file_has_changed = not event.is_directory and event.src_path == self.config.album_path;
             if album_file_has_changed:
                 log.info("Album file changed, updating photos...")
 
@@ -49,6 +49,7 @@ def get_photos_in_cache(cache_path: str) -> set:
         for file in files:
             if "index" not in file:
                 photos_in_cache.add(os.path.splitext(file)[0])
+    return photos_in_cache
 
 def get_photos_in_album_yaml(album_path: str) -> set:
     album_data = load_album_yaml(album_path)              
