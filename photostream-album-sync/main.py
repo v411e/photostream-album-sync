@@ -1,8 +1,9 @@
 import logging, os, time
-from photoprism_album_handler import AlbumHandler
+from photoprism_handler import AlbumHandler
 from config import Config
 from watchdog.observers import Observer
-
+from immich_handler import ImmichHandler
+import asyncio
 
 logging.basicConfig(
     level=logging.INFO,
@@ -19,7 +20,9 @@ if __name__ == "__main__":
             # start watching album file for changes
             event_handler = AlbumHandler(config)
             observer = Observer()
-            observer.schedule(event_handler, path=os.path.dirname(config.album_path), recursive=False)
+            observer.schedule(
+                event_handler, path=os.path.dirname(config.album_path), recursive=False
+            )
             observer.start()
             log.info(f"Watching album file {config.album_path} for changes...")
             try:
@@ -28,3 +31,7 @@ if __name__ == "__main__":
             except KeyboardInterrupt:
                 observer.stop()
             observer.join()
+
+        case "immich":
+            immichHandler = ImmichHandler()
+            asyncio.run(immichHandler.listen_for_notifications())
