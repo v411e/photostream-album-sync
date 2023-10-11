@@ -1,7 +1,7 @@
 version: "3.7"
 services:
   app:
-    image: valentinriess/photoprism-album-sync:latest
+    image: valentinriess/photostream-album-sync:latest
     build:
       context: .
       dockerfile: Dockerfile
