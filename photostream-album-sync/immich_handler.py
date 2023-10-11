@@ -33,21 +33,33 @@ class ImmichHandler:
                     f"Album {self.config.immich_album_id} has changed. Updating photos..."
                 )
 
-                cache = Cache(self.config.cache_path)
+                cache = Cache(path=self.config.cache_path)
                 im_api = ImmichApi(
-                    self.config.username,
-                    self.config.password,
-                    self.config.base_url,
+                    username=self.config.username,
+                    password=self.config.password,
+                    api_key=self.config.api_key,
+                    base_url=self.config.base_url,
                 )
 
                 # API: Get all photos in album
+                photos_in_album = im_api.get_album_asset_uids(self.config.immich_album_id)
+                log.info(f"Photos in album: {photos_in_album}")
 
                 # Cache: Get all photos in cache folder
                 photos_in_cache = cache.get_photos()
+                log.info(f"Photos in cache: {photos_in_cache}")
 
                 # Download new photos
+                new_photos = photos_in_album - photos_in_cache
+                for uid in new_photos:
+                    cache.download_photo(uid, im_api)
 
                 # Remove deleted photos
+                deleted_photos = photos_in_cache - photos_in_album
+                for uid in deleted_photos:
+                    cache.remove_photo(uid)
+
+                log.info("Done updating photos.")
 
         except Exception as e:
             log.error(e)

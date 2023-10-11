@@ -44,15 +44,7 @@ class PhotoprismApi(SyncApi):
         photo_url = f"{self.base_url}/api/v1/photos/{uid}/dl?t={self._get_download_token()}"
         headers = {"X-Session-ID": self._get_session_id()}
         response = requests.get(photo_url, headers=headers)
-        original_filename = (
-            response.headers["Content-Disposition"].split("=")[-1].strip('"')
-        )
-        filename = os.path.join(
-            download_path, f"{uid}{os.path.splitext(original_filename)[1]}"
-        )
-        os.makedirs(os.path.dirname(filename), exist_ok=True)
-        with open(filename, "wb") as f:
-            f.write(response.content)
+        filename = super()._save_file(response=response, download_path=download_path, uid=uid)
         log.info(f"Downloaded {filename}")
         return filename
 

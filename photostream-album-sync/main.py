@@ -33,5 +33,5 @@ if __name__ == "__main__":
             observer.join()
 
         case "immich":
-            immichHandler = ImmichHandler()
+            immichHandler = ImmichHandler(config)
             asyncio.run(immichHandler.listen_for_notifications())

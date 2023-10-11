@@ -20,9 +20,12 @@ class AlbumHandler(FileSystemEventHandler):
             if album_file_has_changed:
                 log.info("Album file changed, updating photos...")
                 pp_api = PhotoprismApi(
-                    self.config.username, self.config.password, self.config.base_url
+                    username=self.config.username,
+                    password=self.config.password,
+                    api_key=self.config.api_key,
+                    base_url=self.config.base_url,
                 )
-                cache = Cache(self.config.cache_path)
+                cache = Cache(path=self.config.cache_path)
 
                 # Get current set of photo UIDs from album data only if 'Hidden' is false
                 photos_in_album = get_photos_in_album_yaml(self.config.album_path)
@@ -39,6 +42,8 @@ class AlbumHandler(FileSystemEventHandler):
                 deleted_photos = photos_in_cache - photos_in_album
                 for uid in deleted_photos:
                     cache.remove_photo(uid)
+
+                log.info("Done updating photos.")
 
         except Exception as e:
             log.error(e)

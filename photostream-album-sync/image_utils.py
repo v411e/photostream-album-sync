@@ -5,8 +5,13 @@ import exiftool
 
 def _iso_to_yyyymmddhhmmss(iso_string: str):
     # date_time_obj = datetime.datetime.fromisoformat(iso_string)
-    date_time_obj = datetime.datetime.strptime(iso_string, "%Y-%m-%dT%H:%M:%SZ")
-    return date_time_obj.strftime("%Y:%m:%d %H:%M:%S")
+    try:
+        date_time_obj = datetime.datetime.strptime(iso_string, "%Y-%m-%dT%H:%M:%SZ")
+    except ValueError:
+        date_time_obj = datetime.datetime.strptime(iso_string, "%Y-%m-%dT%H:%M:%S.%fZ")
+    new_date_str = date_time_obj.strftime("%Y:%m:%d %H:%M:%S")
+    log.info(f"Converted {iso_string} to {new_date_str}")
+    return new_date_str
 
 def _convert_to_jpg_discard_exif(filename: str) -> str:
     if os.path.splitext(filename)[1].lower() != ".jpg":
