@@ -6,11 +6,8 @@ log = logging.getLogger()
 def _get_file_extension(response_header: str):
     content_type = response_header.get('Content-Type')
     content_disposition = response_header.get('Content-Disposition')
-
-    if content_disposition:
-        file_extension = content_disposition.split('=')[-1].strip('"')
-        return '.' + file_extension
-
+    log.debug(f"Content-Type: {content_type}")
+    log.debug(f"Content-Disposition: {content_disposition}")
     if content_type:
         file_extension = content_type.split('/')[1]
         return '.' + file_extension
