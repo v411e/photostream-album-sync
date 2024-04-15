@@ -26,7 +26,7 @@ class ImmichApi(SyncApi):
         return set(asset_uids)
 
     def download_photo(self, uid: str, download_path: str) -> str:
-        url = f"{self.base_url}/api/asset/download/{uid}"
+        url = f"{self.base_url}/api/download/asset/{uid}"
         headers = {"Accept": "application/octet-stream", "x-api-key": self.api_key}
         response = requests.request("POST", url, headers=headers)
         filename = super()._save_file(
@@ -36,7 +36,7 @@ class ImmichApi(SyncApi):
         return filename
 
     def get_taken_at(self, uid: str) -> str:
-        url = f"{self.base_url}/api/asset/assetById/{uid}"
+        url = f"{self.base_url}/api/asset/{uid}"
         headers = {"Accept": "application/json", "x-api-key": self.api_key}
         response = requests.request("GET", url, headers=headers)
         json_response = response.json()
