@@ -6,7 +6,7 @@ log = logging.getLogger()
 
 class ImmichApi(SyncApi):
     def _get_album_info(self, album_id: str) -> dict:
-        url = f"{self.base_url}/api/album/{album_id}"
+        url = f"{self.base_url}/api/albums/{album_id}"
         headers = {"Accept": "application/json", "x-api-key": self.api_key}
         response = requests.request("GET", url, headers=headers)
         json_response = response.json()
@@ -26,9 +26,9 @@ class ImmichApi(SyncApi):
         return set(asset_uids)
 
     def download_photo(self, uid: str, download_path: str) -> str:
-        url = f"{self.base_url}/api/download/asset/{uid}"
+        url = f"{self.base_url}/api/assets/{uid}/original"
         headers = {"Accept": "application/octet-stream", "x-api-key": self.api_key}
-        response = requests.request("POST", url, headers=headers)
+        response = requests.request("GET", url, headers=headers)
         filename = super()._save_file(
             response=response, download_path=download_path, uid=uid
         )
@@ -36,7 +36,7 @@ class ImmichApi(SyncApi):
         return filename
 
     def get_taken_at(self, uid: str) -> str:
-        url = f"{self.base_url}/api/asset/{uid}"
+        url = f"{self.base_url}/api/assets/{uid}"
         headers = {"Accept": "application/json", "x-api-key": self.api_key}
         response = requests.request("GET", url, headers=headers)
         json_response = response.json()
