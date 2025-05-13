@@ -8,14 +8,14 @@ Just use the `docker-compose.yaml` file from this repo. You can either build the
 
 ## Setup Triggers
 ### Immich
-Connect to your immich postgres and create a function and trigger for changes on the `albums` table. The service will listen on the `albums` channel.
+Connect to your immich postgres and create a function and trigger for changes on the `albums_assets_assets` table. The service will listen on the `albums` channel.
 
 #### Create function
 ```sql
 CREATE OR REPLACE FUNCTION notify_albums_change() RETURNS trigger AS $trigger$
 DECLARE
-  rec albums;
-  dat albums;
+  rec albums_assets_assets;
+  dat albums_assets_assets;
   payload TEXT;
 BEGIN
 
@@ -46,7 +46,7 @@ $trigger$ LANGUAGE plpgsql;
 #### Create trigger
 ```sql
 CREATE TRIGGER albums_notify AFTER INSERT OR UPDATE OR DELETE 
-ON albums
+ON albums_assets_assets
 FOR EACH ROW EXECUTE PROCEDURE notify_albums_change();
 ```
 

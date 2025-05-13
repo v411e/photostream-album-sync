@@ -28,7 +28,7 @@ class ImmichHandler:
         try:
             # Check, if the id matches the album id
             record = json.loads(payload).get("record")
-            if record and record.get("id") == self.config.immich_album_id:
+            if record and record.get("albumsId") == self.config.immich_album_id:
                 log.info(
                     f"Album {self.config.immich_album_id} has changed. Updating photos..."
                 )
