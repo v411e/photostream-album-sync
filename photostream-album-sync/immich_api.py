@@ -1,23 +1,27 @@
-import requests, logging
+import logging
+
+import requests
 from sync_api import SyncApi
 
 log = logging.getLogger()
 
 
 class ImmichApi(SyncApi):
-    def _get_album_info(self, album_id: str) -> dict:
-        url = f"{self.base_url}/api/albums/{album_id}"
+    def _search_assets(self, album_id: str) -> dict:
+        url = f"{self.base_url}/api/search/metadata"
         headers = {"Accept": "application/json", "x-api-key": self.api_key}
-        response = requests.request("GET", url, headers=headers)
+        response = requests.request(
+            "POST", url, headers=headers, json={"albumIds": [album_id]}
+        )
         json_response = response.json()
-        log.debug(f"Got album info for {album_id}: {json_response}")
+        log.debug(f"Got result for {album_id}: {json_response}")
         return json_response
 
     def _get_album_assets(self, album_id: str) -> dict:
-        album_info = self._get_album_info(album_id)
-        assets = album_info.get("assets")
+        search_result = self._search_assets(album_id)
+        assets = search_result.get("assets")
         log.debug(f"Got assets for album {album_id}: {assets}")
-        return assets
+        return assets.get("items")
 
     def get_album_asset_uids(self, album_id: str) -> set:
         assets = self._get_album_assets(album_id)
